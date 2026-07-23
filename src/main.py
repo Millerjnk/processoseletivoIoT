@@ -72,9 +72,9 @@ while True:
                        callback=timer_acabado)  
             obj_no_sensor = True
 
-        if tempo_estouro:
-            print("Micro-parada detectada!")
-            tempo_estouro = False
+    if tempo_estouro:
+        print("Alerta: Micro-parada detectada!")
+        tempo_estouro = False
             
     if lux >= LUX_ESTEIRA_LIVRE and obj_no_sensor:
         # Desinicializa o timer se o objeto passar pelo sensor antes do tempo
