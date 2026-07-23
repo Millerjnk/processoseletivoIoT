@@ -1,7 +1,39 @@
 {
   "version": 1,
-  "author": "Uri Shaked",
+  "author": "Guilherme Miller Gama Cardoso",
   "editor": "wokwi",
-  "parts": [ { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 0, "left": 0, "attrs": {} } ],
-  "connections": [ [ "esp:TX", "$serialMonitor:RX", "", [] ], [ "esp:RX", "$serialMonitor:TX", "", [] ] ]
+  "parts": [
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp",
+      "top": -38.4,
+      "left": 4.84,
+      "attrs": { "env": "micropython-20260406-v1.28.0" }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn1",
+      "top": 198.2,
+      "left": -124.8,
+      "attrs": { "color": "red", "xray": "1" }
+    },
+    {
+      "type": "wokwi-photoresistor-sensor",
+      "id": "ldr1",
+      "top": -144.3,
+      "left": -178.3,
+      "rotate": 90,
+      "attrs": {}
+    }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+    [ "esp:3V3", "ldr1:VCC", "red", [ "h0" ] ],
+    [ "esp:GND.1", "ldr1:GND", "black", [ "h0" ] ],
+    [ "btn1:1.r", "esp:14", "green", [ "v0" ] ],
+    [ "btn1:2.l", "esp:GND.1", "black", [ "h-19.2", "v-115" ] ],
+    [ "ldr1:AO", "esp:34", "green", [ "v0" ] ]
+  ],
+  "dependencies": {}
 }
