@@ -13,6 +13,8 @@ timer = Timer(0)
 # Configuração do I2C
 i2c = I2C(0, scl=Pin(22), sda=Pin(21))
 
+time.sleep_ms(100)
+
 # Inicialização do Display
 largura_oled = 128
 altura_oled = 64
