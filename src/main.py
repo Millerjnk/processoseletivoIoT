@@ -10,16 +10,6 @@ ldr_sensor.atten(ADC.ATTN_11DB)
 botao = Pin(14, Pin.IN, Pin.PULL_UP)
 timer = Timer(0)
 
-# Configuração do I2C
-i2c = I2C(0, scl=Pin(22), sda=Pin(21))
-
-time.sleep_ms(100)
-
-# Inicialização do Display
-largura_oled = 128
-altura_oled = 64
-oled = SSD1306_I2C(largura_oled, altura_oled, i2c)
-
 # Inicialização de constantes
 GAMMA = const(0.7)
 RL10 = const(50)
@@ -35,6 +25,14 @@ botao_foi_pressionado = False
 tempo_atual = tempo_passado = 0
 
 print("Contador de Producao Inicializado\n")
+
+# Configuração do I2C
+i2c = I2C(0, scl=Pin(22), sda=Pin(21))
+
+# Inicialização do Display
+largura_oled = 128
+altura_oled = 64
+oled = SSD1306_I2C(largura_oled, altura_oled, i2c)
 
 oled.fill(0)
 oled.text("Contador", 20, 10)
