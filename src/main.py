@@ -1,19 +1,17 @@
 import time
-from machine import Pin, ADC, Timer, SoftI2C
+from machine import Pin, ADC, Timer, I2C
 from math import pow
 from ssd1306 import SSD1306_I2C
 from micropython import const
 
-# Inicialização de pinos, timer e ADC
+# Inicialização de pinos, timer e I2C
 ldr_sensor = ADC(Pin(34))
 ldr_sensor.atten(ADC.ATTN_11DB)
 botao = Pin(14, Pin.IN, Pin.PULL_UP)
 timer = Timer(0)
 
-# Inicialização do I2C
-i2c = SoftI2C(scl=Pin(22), sda=Pin(21))
-
-time.sleep_ms(100) 
+# Configuração do I2C
+i2c = I2C(0, scl=Pin(22), sda=Pin(21))
 
 # Inicialização do Display
 largura_oled = 128
