@@ -274,71 +274,210 @@ Preencha todas as seções abaixo de forma **clara, objetiva e técnica**.
 
 ### Identificação do Candidato
 
-- **Nome completo:**
-- **GitHub:**
+- **Nome completo:** Guilherme Miller Gama Cardoso
+- **GitHub:** https://github.com/Millerjnk
 
 ---
 
 ## Visão Geral da Solução
 
-Descreva, em poucas palavras:
+O objetivo do projeto é criar uma solução de baixo custo voltada para indústrias e linhas de montagem manuais ou semiautomáticas que operam sem Controladores
+lógicos Programáveis (CLPs), eliminando a necessidade de anotações manuais e fornecendo métricas de produtividade em tempo real.
 
-- Qual é o objetivo do seu projeto
-- O que o sistema embarcado simulado faz
-- Como o usuário interage com ele (se aplicável)
+O sistema realiza a contagem de itens em uma linha de montagem a partir da detecção do objeto pelo sensor óptico e mostra em um display OLED a quantidade de peças que detectou, apontando também se houveram micro-paradas que estão atrasando a linha de produção.  
 
----
+Ademais, o usuário/operador também pode interagir com o sistema através de um botão, que reinicia a aplicação, zerando a contagem de peças e exibindo no display que a reinicialização foi executada.
 
 ## Arquitetura do Sistema Embarcado
 
-Explique a arquitetura lógica do seu projeto, abordando:
+### Fluxo principal 
 
-- Fluxo principal do programa (`main.py`)
-- Estrutura de estados, loops ou temporizações
-- Como os componentes interagem entre si
+O fluxo do programa pode ser dividido em 2 grandes blocos:
+- **Inicialização**:
 
-Se desejar, utilize tópicos ou um pequeno diagrama em texto.
+Aqui são inicializados os pinos, timer e o barramento I2C, além do start-up do display e a declaração das variáveis e constantes globais utilizadas durante a execução do código, como `GAMMA`e `RL10`, para extração dos valores de lux, e `obj_no_sensor` para controle do fluxo da esteira.
 
+- **Loop principal**: 
+
+No loop principal, temos 5 ações sendo realizadas:
+
+1. Leitura do sensor óptico e do tempo atual: o programa lê o valor presente no pino ADC e transforma em um valor de lux, de acordo com a documentação, além de coletar o tempo atual da execução do código.
+
+```python
+tempo_atual = time.ticks_ms()
+lux = read_lux()
+```
+
+```python
+def read_lux():
+    # Fórmula para extração do valor do Lux retirada da documentação oficial do sensor LDR
+    valor_lido = ldr_sensor.read()
+    tensao = valor_lido / 4096 * 5
+    resistencia = 2000 * tensao / (1 - tensao / 5)
+    lux = pow(RL10 * 1e3 * pow(10, GAMMA) / resistencia, (1 / GAMMA))
+    return lux
+```
+2. Verificação de objeto no sensor: Um condicional _if_ presente no loop verifica se algum objeto passando no sensor. Se lux for menor que `LUX_ESTEIRA_BLOQUEADA`, uma variável para determinar o limiar de lux que indica quando um item está passando pelo sensor, o código executa as linhas:
+
+```python
+if lux < LUX_ESTEIRA_BLOQUEADA:
+        if not obj_no_sensor:
+            # Inicia um timer em modo One Shot para acabar em LIMIAR_PARADA milissegundos
+            # caso o objeto não avance na esteira
+            timer.init(period=LIMIAR_PARADA, mode=Timer.ONE_SHOT, callback=timer_acabado)  
+            obj_no_sensor = True
+```
+Um timer _One_shot_ é ativado para `LIMIAR_PARADA` milissegundos, e a flag `obj_no_sensor` recebe _True_.
+
+3. Verificação do estouro do timer: Assim que o timer acaba, uma flag é setada e o loop principal ativamente a verifica através do código:
+```python
+if tempo_estouro:
+        print("Alerta: Micro-parada detectada!")
+        
+        oled.fill(0)
+        oled.text("ALERTA:", 30, 10)
+        oled.text("Micro-parada", 15, 25)
+        oled.text("detectada!", 20, 40)
+        oled.show()
+
+        tempo_estouro = False
+```
+Um _print_ com a mensagem "Alerta: Micro-parada detectada!" é enviado para a serial e uma mensagem no display acusando a micro-parada é exibida; a flag tempo estouro é resetada.
+
+4. Verificação da saída do objeto do sensor óptico: neste passo, um outro condicional _if_ executa, validando se o lux lido pelo sensor voltou aos padrões normais, através do limiar `LUX_ESTEIRA_LIVRE` e da flag `obj_no_sensor`.
+
+```python
+if lux >= LUX_ESTEIRA_LIVRE and obj_no_sensor:
+        # Desinicializa o timer se o objeto passar pelo sensor antes do tempo
+        timer.deinit()
+        obj_no_sensor = False
+        tempo_estouro = False
+        contador_itens += 1
+        print(f"Peca detectada! Total: {contador_itens}")
+
+        oled.fill(0) 
+        oled.text("Peca detectada!", 5, 16)
+        oled.text("Total: " + str(contador_itens), 30, 35)
+        oled.show()
+```
+Se a verificação for validada, i.e., o objeto passou do sensor, o timer é desinicializado, o contador de itens incrementado, a flag `tempo_estouro` resetada e a mensagem "Peca detectada! Total `contador_itens`" é imprimida na saída serial e no display OLED.
+
+5. Chamada da função `turno_reset`: por fim, uma função é chamada ao fim de todo loop, a fim de realizar a verificação do aperto do botão.
+
+### Estrutura de estados, loops ou temporizações
+
+O código utiliza o _timer0_ para fazer a cronometragem do tempo para acusar uma micro-parada, e levanta a flag `tempo_estouro`, como já apontado anteriormente:
+
+```python
+def timer_acabado(timer_obj):
+    global tempo_estouro
+    if obj_no_sensor:
+        tempo_estouro = True
+```
+Outro ponto pertinente de se comentar: o código é orientado a flags, ou seja, ao invés de executar funções que tomam muito tempo, por exemplo, _print_, dentro de ISR's como a do _timer0_, opta-se por utilizar flags globais, que são setadas ou resetadas e tratadas no loop principal, permitindo com que as interrupções sejam pontuais.
+
+```python
+# Inicialização de variáveis globais
+obj_no_sensor = False
+tempo_estouro = False
+contador_itens = 0
+botao_foi_pressionado = False
+tempo_atual = tempo_passado = 0
+```
+### Como os componentes interagem entre si
+Todos os componentes estão conectados ao cérebro do sistema, o ESP32. O sensor óptico capta os dados físicos de iluminação e transmite essa informação para o pino ADC do microcontrolador. O micro, então, é responsável por enviar mensagens na serial e também ao display, que funciona como um indicativo visual ao usuário. 
+
+O LED vermelho é outro indicativo visual, apontando quando o nível de lux está abaixo de 100, um forte indício que há um objeto no sensor. Já o LED verde apenas mostra que o sistema está energizado. O botão reinicia toda a contagem realizada via software, que também é exibida no display. A caixa abaixo mostra as conexões realizadas:
+
+
+```text
+ESP32
+├── 3V3 ──► LED Verde (1k Ω)
+├── GPIO 34 ◄── AO (Analog Output do sensor)
+├── GPIO 14 ◄── Botão
+├── GPIO 21 ──► SDA (OLED SSD1306)
+├── GPIO 22 ──► SCL (OLED SSD1306)
+├── 3V3 ──────► VCC (Sensor óptico e OLED)
+└── GND ──────► GND (LEDs, Sensor óptico, Botão e OLED)
+```
+
+```text
+Sensor Óptico
+├── DO (Digital Output) ──► LED Vermelho (1k Ω)
+├── AO (Analog Output do sensor) ──► LED Vermelho (1k Ω)
+├── VCC (Sensor óptico e OLED) ◄─────── 3V3
+└── GND ◄─────── GND (ESP32)
+```
 ---
 
 ## Componentes Utilizados na Simulação
 
 Liste os principais componentes definidos no `diagram.json`, por exemplo:
-
-- Tipo de placa utilizada
-- LEDs, botões, sensores, atuadores, etc.
-- Função de cada componente no sistema
-
+- **ESP32**: é o 'cérebro' do sistema. Resposável por interligar os componentes e executar a lógica do sistema de linha de montagem.
+- **Sensor óptico**: tem função de indicar que há um objeto na esteira, através da transdução de um fenôneno físico, a luz, em medidas digitais que o microcontrolador entende.
+- **Display OLED**: serve como indicativo visual do sistema para o usuário/operador.
+- **Botão**: responsável pelo _reset_ do sistema, zerando a contagem de itens.
+- **LED vermelho**: outro indicativo visual que aponta se o sensor está lendo leituras abaixo de 100 lux.
 ---
 
 ## Decisões Técnicas Relevantes
 
 Explique brevemente decisões importantes tomadas durante o desenvolvimento, como:
+O código foi estruturado para utilizar majoritariamente flags, para tornar o código mais eficiente, como dito anteriormente. Um ponto relevante de ser tratado foi a escolha de acionar o botão na segunda borda de subida, ou seja, quando o botão for solto. Isso é uma tentativa de mitigar um cenário onde o usuário pressiona o botão por muito tempo. Outro ponto é o descarte do uso da interrupção do botão, que foi necessário para facilitar a implementação dessa lógica da soltura do mesmo. A função do botão é a que segue:
 
-- Organização do código
-- Uso de funções, estados ou constantes
-- Estratégias para temporização ou controle lógico
+```python
+def turno_reset(pino):
+    global contador_itens, tempo_atual, tempo_passado, obj_no_sensor, tempo_estouro, botao_foi_pressionado
 
+    if pino.value() == 0:
+        if not botao_foi_pressionado and time.ticks_diff(tempo_atual, tempo_passado) > 300:
+            botao_foi_pressionado = True
+            tempo_passado = tempo_atual
+
+    elif pino.value() == 1:
+        if botao_foi_pressionado:
+            botao_foi_pressionado = False
+            contador_itens = 0
+            obj_no_sensor = False
+            tempo_passado = tempo_atual
+            tempo_estouro = False
+            timer.deinit() 
+            print("Turno resetado com sucesso. Contadores zerados.")
+            
+            oled.fill(0)
+            oled.text("Turno Resetado!", 5, 20)
+            oled.show()
+```
+Essa função é chamada por último no loop principal.
+
+Ademais, foi utilizado um timer para realizar a cronometragem da micro-parada. A função que trata esse timer está exibida abaixo:
+
+```python
+def timer_acabado(timer_obj):
+    global tempo_estouro
+    if obj_no_sensor:
+        tempo_estouro = True
+```
+Por fim, foi implementado um pequeno delay no fim do loop para aliviar a CPU do microcontrolador:
+
+```python
+# Pequeno delay para aliviar o micro
+    time.sleep_ms(10)
+```
 ---
 
 ## Resultados Obtidos
 
 Descreva o comportamento final do sistema:
 
-- O que funciona corretamente
-- Quais requisitos foram atendidos
-- Resultado observado na simulação do Wokwi
-
+O sistema funciona corretamente na simulação do Wokwi, com os requesitos de _reset_ através do botão e a acusação de micro-paradas se algum item estiver preso no sensor. Somado a isto, a implementação do display OLED e os LED's acrescentaram à solução, dando indicativos visuais para o usuário/operador.
 ---
 
 ## Comentários Adicionais (Opcional)
 
-Utilize este espaço para comentar, se desejar:
+Uma dificuldade que enfrentei foi implentar a lógica do botão na segunda borda de seu acionamento, i.e, quando ele fosse solto. Inicialmente, programei o botão para ser tratado por uma ISR, com o _reset_ sendo acionado no seu aperto. Entretanto, por mera coinciência, segurei o botão por tempo demais e percebi os diversos _resets_ que ocorriam. Procurei referências de como resolver isso e achei um vídeo realizando exatamente o que queria. Fiz as adaptações necessárias e consegui fazer funcionar.
 
-- Dificuldades encontradas
-- Limitações da solução
-- Melhorias que você faria com mais tempo
-- Principais aprendizados durante o desafio
+Em relação a possíveis melhorias, eu implementaria uma conexão MQTT com um dashboard para monitoramento remoto do sistema, resolvendo a necessidade de estar presente fisicamente na linha de produção.
 
 ---
 
