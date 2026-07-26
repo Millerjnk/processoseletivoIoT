@@ -147,29 +147,43 @@ Sensor Óptico
 
 - **ESP32**: é o 'cérebro' do sistema. Responsável por interligar os componentes e executar a lógica do sistema da linha de montagem.
 
+<br>
+
 <div align="center">
-  <img width="301" height="537" alt="Placa ESP32" src="https://github.com/user-attachments/assets/081a1560-fc95-4fb3-afa1-25f8a7c8c026" />
+  <img width="300" height="537" alt="Placa ESP32" src="https://github.com/user-attachments/assets/081a1560-fc95-4fb3-afa1-25f8a7c8c026" />
   <br>
   <em>Placa ESP32</em>
 </div>
 
+<br>
+
 - **Sensor óptico**: tem a função de indicar que há um objeto na esteira, por meio da transdução de um fenômeno físico — a luz — em sinais digitais e analógicos que o microcontrolador entende.
+
+<br>
 
 <div align="center">
   <img width="340" height="166" alt="Sensor Óptico LDR" src="https://github.com/user-attachments/assets/3e155172-fe79-44f9-bff3-fcb4aece6e00" />
   <br>
   <em>Sensor Óptico LDR</em>
 </div>
+
+<br>
   
 - **Display OLED**: serve como indicativo visual do sistema para o usuário/operador.
+
+<br>
 
 <div align="center">
   <img width="205" height="176" alt="Display OLED" src="https://github.com/user-attachments/assets/8b8a9b32-9654-494d-bb8c-5271eaf0ede2" />
   <br>
   <em>Display OLED SSD1306</em>
 </div>
+
+<br>
  
 - **Botão**: responsável pelo _reset_ do sistema, zerando a contagem de itens.
+
+<br>
 
 <div align="center">
   <img width="148" height="119" alt="Botão Push Button" src="https://github.com/user-attachments/assets/e9bca7da-f5b1-4ac7-9a9b-1b3a62aa2236" />
@@ -177,15 +191,23 @@ Sensor Óptico
   <em>Botão (Push Button)</em>
 </div>
 
+<br>
+
 - **LED vermelho**: outro indicativo visual que aponta se o sensor está registrando níveis abaixo de 100 lux.
+
+<br>
 
 <div align="center">
   <img width="74" height="89" alt="LED Vermelho" src="https://github.com/user-attachments/assets/698573f3-a21f-44c6-9be4-fd41f4799304" />
   <br>
   <em>LED Vermelho</em>
 </div>
+
+<br>
  
 - **LED verde**: indicativo visual que acusa se o sistema está energizado.
+
+<br>
 
 <div align="center">
   <img width="74" height="84" alt="LED Verde" src="https://github.com/user-attachments/assets/98a467c8-9489-4c1c-b69b-bdce5e878ac9" />
